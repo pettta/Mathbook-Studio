@@ -2,6 +2,7 @@
 import { onMounted, onBeforeUnmount, ref, watch, computed, nextTick } from 'vue'
 import * as pdfjs from 'pdfjs-dist'
 import { store, buildNow, detectCompanion, locateInPreview, editor, toast } from '../store'
+import { activeWindow } from '../lib/popout'
 
 // own worker so the Map-upsert polyfill also runs inside pdf.js's worker
 pdfjs.GlobalWorkerOptions.workerPort = new Worker(new URL('../pdf.worker.ts', import.meta.url), { type: 'module' })
@@ -16,6 +17,9 @@ let doc: pdfjs.PDFDocumentProxy | null = null
 let task: pdfjs.PDFDocumentLoadingTask | null = null
 let renderToken = 0
 let resizeObs: ResizeObserver | null = null
+// the panel may live in a popped-out window: create DOM there and use its pixel ratio
+const doc_ = () => scroller.value?.ownerDocument ?? document
+const win = () => doc_().defaultView ?? window
 
 const c = computed(() => store.compile)
 const ready = computed(() => c.value.enabled && !!c.value.health?.ok && !!c.value.health?.latexmk)
@@ -48,7 +52,7 @@ async function load() {
 async function renderAll(token: number) {
   if (!doc || !pages.value || !scroller.value) return
   const width = Math.max(200, scroller.value.clientWidth - 24)
-  const frag = document.createDocumentFragment()
+  const frag = doc_().createDocumentFragment()
   const canvases: { canvas: HTMLCanvasElement; page: number; viewport: pdfjs.PageViewport; p: pdfjs.PDFPageProxy }[] = []
   for (let i = 1; i <= doc.numPages; i++) {
     const p = await doc.getPage(i)
@@ -56,8 +60,8 @@ async function renderAll(token: number) {
     const base = p.getViewport({ scale: 1 })
     const scale = (width / base.width) * zoom.value
     const viewport = p.getViewport({ scale })
-    const canvas = document.createElement('canvas')
-    const dpr = window.devicePixelRatio || 1
+    const canvas = doc_().createElement('canvas')
+    const dpr = win().devicePixelRatio || 1
     canvas.width = Math.floor(viewport.width * dpr)
     canvas.height = Math.floor(viewport.height * dpr)
     canvas.style.width = viewport.width + 'px'
@@ -71,7 +75,7 @@ async function renderAll(token: number) {
   for (const { canvas, viewport, p } of canvases) {
     if (token !== renderToken) return
     const ctx = canvas.getContext('2d')!
-    const dpr = window.devicePixelRatio || 1
+    const dpr = win().devicePixelRatio || 1
     await p.render({ canvasContext: ctx, viewport, transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined } as any).promise
   }
 }
@@ -104,7 +108,7 @@ watch(() => c.value.locate?.version, async () => {
 
 onMounted(() => {
   void load()
-  resizeObs = new ResizeObserver(() => { if (doc) void load() })
+  resizeObs = new (win().ResizeObserver)(() => { if (doc) void load() })
   if (scroller.value) resizeObs.observe(scroller.value)
 })
 onBeforeUnmount(() => { renderToken++; void task?.destroy(); resizeObs?.disconnect() })
@@ -115,7 +119,7 @@ function jump(e: { file: string; line: number | null }) {
   if (store.project && file in store.project.files) editor()?.goTo(file, e.line)
 }
 function setUrl() {
-  const u = window.prompt('Compile companion URL (run `npm run compile-server`, or point at a homelab instance):', c.value.url)
+  const u = activeWindow().prompt('Compile companion URL (run `npm run compile-server`, or point at a homelab instance):', c.value.url)
   if (u) { c.value.url = u.trim().replace(/\/$/, ''); void detectCompanion() }
 }
 </script>
@@ -150,7 +154,8 @@ function setUrl() {
     <div v-if="!ready" class="howto">
       <p><strong>Whole-book preview</strong> needs a TeX engine. Run the companion on any machine with TeX Live / MacTeX:</p>
       <pre>cd mathbook-studio
-npm run compile-server        # serves http://127.0.0.1:4747</pre>
+npm run dev                   # app + companion on http://127.0.0.1:4747
+npm run compile-server        # companion only</pre>
       <p>It receives the project, runs <code>latexmk -pdf</code>, and returns the PDF; SyncTeX <em>Locate</em> jumps the preview to your cursor. The app checks for it on startup and when you press Retry. For a homelab instance, build <code>Dockerfile.compile</code> and set the URL.</p>
       <p v-if="c.health && !c.health.latexmk" class="warn">The companion is running but <code>latexmk</code> was not found on its PATH.</p>
     </div>

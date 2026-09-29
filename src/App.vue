@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import FileTree from './components/FileTree.vue'
 import EditorPane from './components/EditorPane.vue'
 import PenrosePanel from './components/PenrosePanel.vue'
@@ -7,6 +7,8 @@ import SnippetsPanel from './components/SnippetsPanel.vue'
 import HelpPanel from './components/HelpPanel.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
 import ProjectsDialog from './components/ProjectsDialog.vue'
+import DocsPanel from './components/DocsPanel.vue'
+import { popTargets, popOut, dock, showPanel, setPopupKeyHandler, PANEL_LABELS, type PanelId } from './lib/popout'
 import { store, initSnippets, restoreLast, exportProjectZip, flushSave, markDirty, buildNow, companionReady } from './store'
 
 const rightWidth = ref(440)
@@ -19,18 +21,28 @@ onMounted(async () => {
   if (!ok) store.dialog = 'projects'
   window.addEventListener('mousemove', onDrag)
   window.addEventListener('mouseup', () => { dragging.value = null })
-  window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void flushSave() }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o' && !e.shiftKey) { e.preventDefault(); store.dialog = 'projects' }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); store.rightTab = 'preview'; void buildNow() }
-  })
+  window.addEventListener('keydown', onKey)
+  setPopupKeyHandler(onKey)
 })
+function onKey(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void flushSave() }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o' && !e.shiftKey) { e.preventDefault(); store.dialog = 'projects' }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); showPanel('preview'); void buildNow() }
+}
 function onDrag(e: MouseEvent) {
   if (dragging.value === 'right') rightWidth.value = Math.min(Math.max(320, window.innerWidth - e.clientX), window.innerWidth * 0.7)
   if (dragging.value === 'left') leftWidth.value = Math.min(Math.max(150, e.clientX), 420)
 }
 
 const saveState = computed(() => store.saving ? 'saving…' : store.dirty ? 'unsaved' : store.savedAt ? 'saved' : '')
+const TABS = Object.keys(PANEL_LABELS) as PanelId[]
+const tabLabel = (id: PanelId) => id === 'docs' ? 'Docs' : PANEL_LABELS[id]
+const poppedTabs = computed(() => TABS.filter((id) => popTargets[id]))
+// the docs iframe loads an external site: only mount it once the tab is first opened
+const docsSeen = ref(false)
+watch(() => store.rightTab, (t) => { if (t === 'docs') docsSeen.value = true }, { immediate: true })
+function clickTab(id: PanelId) { if (popTargets[id]) showPanel(id, true); else store.rightTab = id }
+
 function renameProject() {
   if (!store.project) return
   const n = window.prompt('Book title:', store.project.name)
@@ -49,7 +61,7 @@ function renameProject() {
       <button @click="store.dialog = 'projects'">Projects</button>
       <button :disabled="!store.project" @click="store.dialog = 'newChapter'">+ Chapter</button>
       <button :disabled="!store.project" @click="exportProjectZip">Export ZIP</button>
-      <button class="primary" :disabled="!store.project || !companionReady() || store.compile.building" @click="store.rightTab = 'preview'; buildNow()" :title="companionReady() ? 'Compile with the companion (Ctrl/⌘-Enter)' : 'Start the compile companion to build in-app'">
+      <button class="primary" :disabled="!store.project || !companionReady() || store.compile.building" @click="showPanel('preview'); buildNow()" :title="companionReady() ? 'Compile with the companion (Ctrl/⌘-Enter)' : 'Start the compile companion to build in-app'">
         {{ store.compile.building ? 'Building…' : 'Build PDF' }}
       </button>
     </header>
@@ -61,22 +73,46 @@ function renameProject() {
       <div class="gutter" @mousedown.prevent="dragging = 'right'" />
       <aside class="right">
         <div class="rtabs">
-          <button :class="{ on: store.rightTab === 'diagram' }" @click="store.rightTab = 'diagram'">Diagram</button>
-          <button :class="{ on: store.rightTab === 'library' }" @click="store.rightTab = 'library'">Library</button>
-          <button :class="{ on: store.rightTab === 'preview' }" @click="store.rightTab = 'preview'">
-            Preview<span v-if="store.compile.ok === false" class="dot bad" /><span v-else-if="companionReady()" class="dot ok" />
+          <button v-for="id in TABS" :key="id" :class="{ on: store.rightTab === id && !popTargets[id], popped: popTargets[id] }"
+                  :title="popTargets[id] ? 'Open in its own window (click to raise)' : ''" @click="clickTab(id)">
+            {{ tabLabel(id) }}<template v-if="id === 'preview'"><span v-if="store.compile.ok === false" class="dot bad" /><span v-else-if="companionReady()" class="dot ok" /></template><span v-if="popTargets[id]" class="out">↗</span>
           </button>
-          <button :class="{ on: store.rightTab === 'snippets' }" @click="store.rightTab = 'snippets'">Snippets</button>
-          <button :class="{ on: store.rightTab === 'help' }" @click="store.rightTab = 'help'">Help</button>
+          <button class="popbtn" :disabled="!!popTargets[store.rightTab]" @click="popOut(store.rightTab)" :title="`Open ${PANEL_LABELS[store.rightTab]} in its own window`">⧉</button>
         </div>
         <div class="rbody">
-          <PenrosePanel v-show="store.rightTab === 'diagram' || store.rightTab === 'library'" />
-          <PreviewPanel v-show="store.rightTab === 'preview'" />
-          <SnippetsPanel v-if="store.rightTab === 'snippets'" />
-          <HelpPanel v-if="store.rightTab === 'help'" />
+          <PenrosePanel v-if="!popTargets.diagram" v-show="store.rightTab === 'diagram'" mode="diagram" />
+          <PenrosePanel v-if="!popTargets.library" v-show="store.rightTab === 'library'" mode="library" />
+          <PreviewPanel v-if="!popTargets.preview" v-show="store.rightTab === 'preview'" />
+          <SnippetsPanel v-if="store.rightTab === 'snippets' && !popTargets.snippets" />
+          <DocsPanel v-if="docsSeen && !popTargets.docs" v-show="store.rightTab === 'docs'" />
+          <HelpPanel v-if="store.rightTab === 'help' && !popTargets.help" />
+          <div v-if="popTargets[store.rightTab]" class="allout">
+            <p>{{ PANEL_LABELS[store.rightTab] }} is open in its own window.</p>
+            <button @click="dock(store.rightTab)">Bring it back</button>
+          </div>
         </div>
       </aside>
     </div>
+
+    <!-- popped-out panels: rendered by this app, displayed in their own windows -->
+    <Teleport v-for="id in poppedTabs" :key="id" :to="popTargets[id]!">
+      <div class="popwin">
+        <div class="popbar">
+          <span class="poptitle">{{ PANEL_LABELS[id] }}</span>
+          <span class="project muted">{{ store.project?.name }}</span>
+          <span class="spacer" />
+          <button @click="dock(id)" title="Put this panel back in the main window">Dock</button>
+        </div>
+        <div class="rbody">
+          <PenrosePanel v-if="id === 'diagram' || id === 'library'" :mode="id" />
+          <PreviewPanel v-else-if="id === 'preview'" />
+          <SnippetsPanel v-else-if="id === 'snippets'" />
+          <DocsPanel v-else-if="id === 'docs'" />
+          <HelpPanel v-else-if="id === 'help'" />
+        </div>
+        <div class="toast" v-if="store.toast">{{ store.toast }}</div>
+      </div>
+    </Teleport>
 
     <ProjectsDialog v-if="store.dialog !== 'none'" />
     <div class="toast" v-if="store.toast">{{ store.toast }}</div>
@@ -108,5 +144,12 @@ function renameProject() {
 .dot.bad { background: #dc2626; }
 .rbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .rbody > * { flex: 1; min-height: 0; }
+.rtabs button.popped { color: var(--fg-2); font-style: italic; }
+.rtabs .out { margin-left: 3px; font-size: 10px; }
+.rtabs button.popbtn { flex: none; width: 30px; border-right: none; }
+.allout { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--fg-2); }
+.popwin { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg); }
+.popbar { display: flex; align-items: center; gap: 10px; padding: 0 10px; height: 36px; border-bottom: 1px solid var(--line); background: var(--bg-2); flex: none; }
+.poptitle { font-weight: 600; }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 60; }
 </style>

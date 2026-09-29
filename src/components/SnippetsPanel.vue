@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { store, applySnippetsSource, defaultSnippetsSource, toast } from '../store'
+import { activeWindow } from '../lib/popout'
 
 const src = ref(store.snippetsSource)
 watch(() => store.snippetsSource, (v) => { if (v !== src.value) src.value = v })
 
 function apply() { if (applySnippetsSource(src.value)) toast(`${store.snippets.length} snippets loaded`) }
-function reset() { if (window.confirm('Replace your snippets with the defaults?')) { src.value = defaultSnippetsSource(); apply() } }
+function reset() { if (activeWindow().confirm('Replace your snippets with the defaults?')) { src.value = defaultSnippetsSource(); apply() } }
 function download() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([src.value], { type: 'application/json' })); a.download = 'snippets.json'; a.click()
 }

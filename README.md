@@ -13,6 +13,10 @@ A browser-only (vibe-coded) writing environment for mathematics notes and books 
   Substance / Style / Domain, resample layouts, and **Insert into book** —
   which saves `figures/<name>.svg`, `figures/<name>.pdf` (vector) and the
   Penrose source next to it, and drops a numbered `figure` at the cursor.
+  The **Docs** tab embeds the Penrose language reference (online).
+* **Pop-out panels**: the ⧉ button next to the right-pane tabs opens the
+  current panel (Diagram, Library, Preview, Docs, …) in its own window, e.g.
+  on a second monitor. It stays live, and **Dock** or closing the window puts it back.
 * **Projects** stored in the browser (IndexedDB). New book from the template,
   add chapters, import/export as a plain LaTeX folder in a ZIP.
 
@@ -28,13 +32,18 @@ A browser-only (vibe-coded) writing environment for mathematics notes and books 
 
 ```sh
 npm install
-npm run dev          # http://localhost:5173
+npm run dev          # http://localhost:5173, also starts the compile companion
 npm run build        # static site in dist/
 npm run preview      # serve dist/ locally
 ```
 
+`npm run dev` starts the compile companion (on http://127.0.0.1:4747) in the
+same terminal and stops it when Vite exits. If no TeX is found, it installs a
+private TeX Live (~350 MB) without asking. Set `NO_COMPILE_SERVER=1` to skip
+the companion, for example to run it on its own:
+
 ```sh
-npm run compile-server   # optional: whole-book preview, needs latexmk on PATH
+npm run compile-server   # companion only: whole-book preview, needs latexmk on PATH
                          # flags: --port 4747 --host 127.0.0.1 --dir ~/.mathbook-studio/build
 ```
 

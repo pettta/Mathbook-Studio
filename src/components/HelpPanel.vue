@@ -27,9 +27,14 @@ const rows = {
   'Penrose panel': [
     ['Examples', 'the Penrose gallery, bundled; pick one, edit Substance / Style / Domain'], ['Render / Resample', 're-run the layout · new random seed'],
     ['Insert into book', 'saves figures/<name>.svg + .pdf + .penrose.json and inserts a numbered figure at the cursor'], ['Library', 'every diagram in the project — re-edit, re-insert, delete'],
+    ['Docs', 'the Penrose language reference (Domain / Substance / Style, shapes, constraints); needs a network connection'],
+  ],
+  'Windows': [
+    ['⧉ (right of the tabs)', 'open the current panel in its own window, e.g. Preview on a second monitor; it stays live and remembers its size and place'],
+    ['Dock · close the window', 'put the panel back in the right pane'],
   ],
   'Building the PDF': [
-    ['npm run compile-server', 'start the compile companion on a machine with TeX Live; the Preview tab lights up when it is reachable'],
+    ['npm run dev · npm run compile-server', 'the dev server also starts the compile companion; compile-server runs it alone. The Preview tab lights up when it is reachable'],
     ['Build PDF · Ctrl/⌘-Enter · auto', 'compile now · rebuild after every save'], ['Locate', 'SyncTeX: scroll the preview to the cursor line; click an error to jump to its source'],
     ['Export ZIP', 'unzip, then  latexmk -pdf main.tex  (needs cleveref, titlesec, tocloft, fancyhdr, algorithmicx, caption, newfloat, wrapfig, xspace, graphicx)'],
   ],

@@ -1,8 +1,10 @@
-<script setup lang="ts">
+<script lang="ts">
+// State lives at module level so the Diagram and Library views (docked, or popped out
+// into their own windows) share one workbench and survive being moved between windows.
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
-import CodeBox from './CodeBox.vue'
 import { renderTrio, RenderCancelled, randomVariation, svgToString, svgToPdf, svgSize, cropToContent, type RenderProgress } from '../lib/penrose/render'
 import { store, editor, updateFile, toast, markDirty } from '../store'
+import { showPanel, activeWindow } from '../lib/popout'
 import { listDiagrams, diagramPath, figureEnvironment, slugify, type DiagramRecord } from '../lib/project'
 
 interface Example { id: string; name: string; group: string; gallery: boolean; domain: string; substance: string; style: string; variation: string }
@@ -18,7 +20,6 @@ const exampleId = ref('')
 const search = ref('')
 const status = ref<RenderProgress>({ phase: 'done' })
 const errorText = ref('')
-const svgHost = ref<HTMLDivElement | null>(null)
 const currentSvg = shallowRef<SVGSVGElement | null>(null)
 const autoRender = ref(false)
 const showEditors = ref(true)
@@ -42,12 +43,15 @@ const grouped = computed(() => {
   return [...map.entries()].sort((a, b) => (a[0].startsWith('★') ? -1 : b[0].startsWith('★') ? 1 : a[0].localeCompare(b[0])))
 })
 
-onMounted(async () => {
+let examplesLoading = false
+async function loadExamples() {
+  if (examplesLoading) return
+  examplesLoading = true
   const mod = await import('../lib/penrose/examples.json')
   examples.value = (mod.default as Example[])
   const first = examples.value.find((e) => e.id === 'set-theory-domain/tree-euler') ?? examples.value[0]
   if (first && !substance.value) loadExample(first.id)
-})
+}
 
 function loadExample(id: string) {
   const e = examples.value.find((x) => x.id === id)
@@ -66,12 +70,9 @@ async function render() {
   try {
     const { svg: raw } = await renderTrio({ domain: domain.value, substance: substance.value, style: style.value, variation: variation.value }, (p) => { status.value = p })
     const svg = cropToContent(raw)
+    svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%')
+    svg.style.maxHeight = '100%'
     currentSvg.value = svg
-    if (svgHost.value) {
-      svgHost.value.replaceChildren(svg)
-      svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%')
-      svg.style.maxHeight = '100%'
-    }
   } catch (e) {
     if (e instanceof RenderCancelled) return
     status.value = { phase: 'error' }
@@ -124,11 +125,11 @@ function loadDiagram(d: DiagramRecord) {
   figName.value = d.name; caption.value = d.caption; label.value = d.label; width.value = d.width
   nameTouched.value = true; labelTouched.value = true
   exampleId.value = ''
-  store.rightTab = 'diagram'
+  showPanel('diagram', true)
   void render()
 }
 function removeDiagram(d: DiagramRecord) {
-  if (!store.project || !window.confirm(`Delete figures/${d.name}.* ?`)) return
+  if (!store.project || !activeWindow().confirm(`Delete figures/${d.name}.* ?`)) return
   for (const ext of ['.svg', '.pdf', '.penrose.json']) delete store.project.files[`figures/${d.name}${ext}`]
   markDirty()
 }
@@ -178,10 +179,19 @@ where Subset(b, a) {
 }
 </script>
 
+<script setup lang="ts">
+import CodeBox from './CodeBox.vue'
+
+defineProps<{ mode: 'diagram' | 'library' }>()
+const svgHost = ref<HTMLDivElement | null>(null)
+watch([svgHost, currentSvg], ([host, svg]) => { if (host && svg) host.replaceChildren(svg) })
+onMounted(() => { void loadExamples() })
+</script>
+
 <template>
   <div class="penrose">
     <!-- ================= Diagram tab ================= -->
-    <div v-if="store.rightTab === 'diagram'" class="diagram">
+    <div v-if="mode === 'diagram'" class="diagram">
       <div class="toolbar">
         <select :value="exampleId" @change="loadExample(($event.target as HTMLSelectElement).value)" title="Load a Penrose example">
           <option value="" disabled>Examples…</option>
@@ -240,7 +250,7 @@ where Subset(b, a) {
     </div>
 
     <!-- ================= Library tab ================= -->
-    <div v-else-if="store.rightTab === 'library'" class="library">
+    <div v-else class="library">
       <p v-if="!diagrams.length" class="muted">No diagrams saved in this project yet. Render one and press <em>Insert into book</em>.</p>
       <div v-for="d in diagrams" :key="d.name" class="card">
         <div class="thumb" v-html="(store.project?.files[`figures/${d.name}.svg`] as string) || ''"></div>

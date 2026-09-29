@@ -7,7 +7,10 @@ import {
 import { DEFAULT_SNIPPETS } from './lib/snippets/defaults'
 import type { Snippet } from './lib/snippets/types'
 import { scanLabels } from './lib/latex'
+import { showPanel } from './lib/popout'
 import { checkHealth, buildProject, fetchPdf, synctexForward, DEFAULT_COMPANION_URL, type BuildError, type Health } from './lib/compile'
+
+export type PanelId = 'diagram' | 'library' | 'preview' | 'snippets' | 'docs' | 'help'
 
 export interface EditorBridge {
   insertAtCursor(text: string): void
@@ -29,7 +32,7 @@ interface StoreState {
   snippets: Snippet[]
   snippetsSource: string
   snippetsError: string
-  rightTab: 'diagram' | 'library' | 'preview' | 'snippets' | 'help'
+  rightTab: PanelId
   compile: {
     url: string
     health: Health | null
@@ -367,7 +370,7 @@ export async function locateInPreview(): Promise<void> {
   const r = await synctexForward(store.compile.url, store.project.id, file, ed.getCursorLine())
   if (!r) { toast('No SyncTeX match for this line (build first)'); return }
   store.compile.locate = { page: r.page, x: r.x, y: r.y, v: r.v, version: (store.compile.locate?.version ?? 0) + 1 }
-  store.rightTab = 'preview'
+  showPanel('preview')
 }
 
 window.addEventListener('beforeunload', () => { void flushSave() })
