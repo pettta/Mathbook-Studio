@@ -1,0 +1,163 @@
+\chapter{The Real Numbers}\label{ch:reals}
+\chapterquote{Numbers are free creations of the human mind; they serve as a
+means of apprehending more easily and more sharply the difference of things.}
+{Richard Dedekind}{Was sind und was sollen die Zahlen?}
+
+Analysis begins with the real numbers. In this chapter we list the axioms
+that characterize $\R$ as a complete ordered field and extract the first
+consequences that will be used throughout the book: the Archimedean property
+and the density of the rationals.\footnote{Both go back to antiquity: the
+Archimedean property appears in Euclid as Definition V.4, and it is used by
+Eudoxus in the theory of proportion.}
+
+The aim is not completeness of exposition but economy: everything proved
+here is used again in later chapters.
+
+% ------------------------------------------------------------------
+\section{Ordered fields}\label{sec:ordered-fields}
+
+\subsection{Fields}
+We begin with the algebraic structure.
+
+\begin{definition}[Field]\label{def:field}
+A \emph{field} is a set $F$ with two binary operations $+$ and $\cdot$ such
+that $(F,+)$ is an abelian group with identity $0$, $(F\setminus\{0\},\cdot)$
+is an abelian group with identity $1$, and multiplication distributes over
+addition.
+\end{definition}
+
+\begin{example}[The rationals]\label{ex:rationals}
+$\Q$ with its usual operations is a field. So is $\Z/p\Z$ for every prime $p$;
+we will see in a moment that the latter cannot be ordered.
+\end{example}
+
+\subsection{Order}
+The real numbers carry more than an algebraic structure.
+
+\begin{definition}[Ordered field]\label{def:ordered-field}
+An \emph{ordered field} is a field $F$ together with a subset $P\subseteq F$
+(the \emph{positive} elements)\footnote{Equivalently, one may specify a total
+order $<$ compatible with $+$ and $\cdot$.} closed under $+$ and $\cdot$, such that for
+every $x\in F$ exactly one of $x\in P$, $x=0$, $-x\in P$ holds. We write
+$x<y$ when $y-x\in P$.
+\end{definition}
+
+\begin{proposition}\label{prop:squares}
+In an ordered field, $x^2>0$ for every $x\neq 0$. In particular $1>0$.
+\end{proposition}
+
+\begin{proof}
+This is \cref{ex:squares}.
+\end{proof}
+
+\begin{corollary}\label{cor:no-order-Zp}
+The field $\Z/p\Z$ admits no ordering.
+\end{corollary}
+
+\begin{proof}
+If it did, $1>0$ by \cref{prop:squares}, hence
+$0 = 1 + 1 + \cdots + 1 > 0$ ($p$ summands), a contradiction.
+\end{proof}
+
+\begin{exercises}
+\begin{exercise}
+Prove that the additive and multiplicative identities of a field are unique.
+\end{exercise}
+
+\begin{exercise}\label{ex:squares}
+Prove \cref{prop:squares}: in an ordered field $x^2>0$ for all $x\neq 0$.
+\fromtext{prop:squares, sec:completeness}
+\end{exercise}
+
+\begin{exercise}\label{ex:abs-value}
+Define $|x| = \max(x,-x)$ in an ordered field. Prove the triangle inequality
+$|x+y|\le|x|+|y|$.
+\fromex{ex:reverse-triangle}
+\end{exercise}
+
+\begin{exercise}[Complex numbers]
+Show that $\mathbb{C}$ admits no ordering. (Use \cref{prop:squares}.)
+\end{exercise}
+\end{exercises}
+
+% ------------------------------------------------------------------
+\section{Completeness}\label{sec:completeness}
+
+\subsection{Suprema}
+\begin{definition}[Supremum]\label{def:sup}
+Let $S$ be a subset of an ordered field $F$. An element $s\in F$ is the
+\emph{supremum} of $S$, written $s=\sup S$, if $s$ is an upper bound of $S$
+and $s\le t$ for every upper bound $t$ of $S$.
+\end{definition}
+
+\begin{principle}[Completeness axiom]\label{pr:completeness}
+Every nonempty subset of $\R$ that is bounded above has a supremum in $\R$.
+\end{principle}
+
+\begin{remark}
+\Cref{pr:completeness} is what separates $\R$ from $\Q$: the set
+$\{q\in\Q : q^2<2\}$ is bounded above in $\Q$ but has no supremum there.
+\end{remark}
+
+\subsection{Consequences}
+\begin{theorem}[Archimedean property]\label{thm:archimedean}
+For every $x\in\R$ there is $n\in\N$ with $n>x$. Equivalently,
+\begin{equation}\label{eq:archimedean}
+  \inf_{n\ge 1}\frac1n = 0.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+If not, $\N$ is bounded above; let $s=\sup\N$ by \cref{pr:completeness}.
+Then $s-1$ is not an upper bound, so $n>s-1$ for some $n\in\N$, whence
+$n+1>s$ with $n+1\in\N$, a contradiction.
+\end{proof}
+
+\begin{corollary}[Density of $\Q$]\label{cor:density}
+Between any two real numbers $a<b$ there is a rational number.
+\end{corollary}
+
+\begin{proof}
+By \eqref{eq:archimedean} choose $n$ with $1/n<b-a$; now apply
+\cref{ex:density}.
+\end{proof}
+
+\begin{example}[An irrational supremum]
+The set $S=\{q\in\Q: q^2<2\}$ has $\sup S=\sqrt2$ in $\R$.
+\end{example}
+
+\begin{exercises}
+\begin{exercise}\label{ex:density}
+Let $a<b$ and $1/n<b-a$. Show that some $m/n$ lies in $(a,b)$.
+\fromtext{cor:density}
+\end{exercise}
+
+\begin{exercise}\label{ex:reverse-triangle}
+Prove the reverse triangle inequality $\bigl||x|-|y|\bigr|\le|x-y|$.
+(Use \cref{ex:abs-value}.)
+\end{exercise}
+
+\begin{exercise*}[Dedekind cuts]\label{ex:cuts}
+Construct $\R$ from $\Q$ by Dedekind cuts, and verify
+\cref{pr:completeness} for your construction.
+\end{exercise*}
+\end{exercises}
+
+% ------------------------------------------------------------------
+\begin{problems}
+\begin{problem}[Uniqueness of $\R$]\label{prob:unique}
+Show that any two complete ordered fields are isomorphic as ordered fields.
+\begin{parts}
+  \item Show that each contains a unique copy of $\Q$.
+  \item Extend the identity of $\Q$ using suprema, and check that it is an
+        order-preserving field isomorphism.
+\end{parts}
+\hint{Density of $\Q$, \cref{cor:density}, is used in both directions.}
+\end{problem}
+
+\begin{problem*}\label{prob:non-arch}
+Construct an ordered field that is not Archimedean.
+\hint{Order the rational functions $\R(t)$ by the sign of the leading
+coefficient.}
+\end{problem*}
+\end{problems}

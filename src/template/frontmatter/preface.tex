@@ -1,0 +1,72 @@
+\chapter{How to Use This Template}
+
+This short front-matter chapter doubles as a quick reference. It is an
+unnumbered chapter (because it sits in \verb|\frontmatter|), so it gets the
+same opener as a numbered chapter, minus the ``Chapter'' line, and appears
+in bold in the table of contents.
+
+\subsection*{Structure}
+\begin{itemize}[leftmargin=1.5em]
+  \item \verb|\chapter{Title}| then, optionally,
+        \verb|\chapterquote{Quote}{Author}{Source}|.
+  \item \verb|\section|, \verb|\subsection| as usual. Sections are numbered
+        $1, 2, \dots$ inside each chapter, subsections $1.1, 1.2, \dots$
+  \item Theorem-like environments: \texttt{theorem}, \texttt{proposition},
+        \texttt{lemma}, \texttt{corollary}, \texttt{claim},
+        \texttt{conjecture}, \texttt{definition}, \texttt{example},
+        \texttt{notation}, \texttt{remark} (plus starred, unnumbered
+        versions). All share one counter that restarts in every section.
+        An optional argument is the subtitle:
+        \verb|\begin{theorem}[Bolzano--Weierstrass]|.
+  \item \texttt{proof} works as in \texttt{amsthm}.
+\end{itemize}
+
+\subsection*{References}
+Label anything with \verb|\label{...}| and cite it with \verb|\cref{...}|
+(or \verb|\Cref| at the start of a sentence). Inside the same chapter you get
+``Theorem~1.6'' and ``\S2''; from another chapter the chapter number is
+added automatically: ``Theorem~I.1.6'' and ``\S I.2''.
+
+\subsection*{Exercises}
+At the end of a section:
+\begin{verbatim}
+\begin{exercises}
+  \begin{exercise}[optional title] \label{ex:foo}
+    Prove that ... \fromtext{thm:bar, sec:baz}
+  \end{exercise}
+  \begin{exercise}
+    Show that ... \fromex{ex:qux}
+  \end{exercise}
+\end{exercises}
+\end{verbatim}
+\verb|\fromtext{...}| puts a \MBtextmarker{} before the exercise (it is
+referred to from the text); \verb|\fromex{...}| puts a \MBexmarker{} (it is
+referred to from other exercises). Either way the places you list are printed,
+hyperlinked, in brackets at the end of the exercise. Use
+\verb|exercise*| to flag a harder exercise with an asterisk.
+
+\subsection*{Problems}
+At the end of a chapter, \verb|\begin{problems} ... \end{problems}| starts a
+numbered ``Problems'' section. Inside, use \verb|problem| or \verb|problem*|;
+\verb|\hint{...}| prints a bracketed hint on its own line.
+
+\subsection*{Pseudocode}
+Procedures are typeset in the style of CLRS, with typed parameters:
+\begin{verbatim}
+\begin{procedure}[returns=\N, columns={cost, times},
+                  caption={...}, label=alg:foo, float]
+  {Insertion-Sort}{A: \R^n, n: \N}
+  \For{$j = 2$ \To $n$}      \Cols{c_1 & n}
+    \State $key = A[j]$      \Cols{c_2 & n-1}
+  \EndFor
+\end{procedure}
+\end{verbatim}
+Useful options are \verb|float| (let it float), \verb|figure| (number it as
+a Figure instead of an Algorithm), \verb|wrap| (set it beside the text),
+\verb|width|, \verb|colwidth(s)| and \verb|numbers=false|. Without
+\verb|caption| and \verb|float| it sits inline, unnumbered, as in CLRS.
+The \texttt{procedure} environment is documented in the class file.
+
+\subsection*{Footnotes}
+\verb|\footnote{...}| works as usual. Footnotes are styled as in Aluffi and
+numbered afresh in each chapter.

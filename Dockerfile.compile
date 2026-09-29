@@ -1,0 +1,10 @@
+# Compile companion with a full TeX Live, for the homelab.
+#   docker build -f Dockerfile.compile -t mathbook-compile .
+#   docker run -p 4747:4747 -v mathbook-build:/build mathbook-compile
+# Then set the companion URL in the app's Preview tab to http://<host>:4747
+FROM texlive/texlive:latest
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs && rm -rf /var/lib/apt/lists/*
+WORKDIR /srv
+COPY server/compile-server.mjs .
+EXPOSE 4747
+CMD ["node", "compile-server.mjs", "--host", "0.0.0.0", "--port", "4747", "--dir", "/build"]
