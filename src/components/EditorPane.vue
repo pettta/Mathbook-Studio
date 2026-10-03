@@ -9,7 +9,7 @@ import { snippet } from '@codemirror/autocomplete'
 import { latexSnippets, snippetSettings } from '../lib/snippets/engine'
 import { assistExtensions } from '../lib/snippets/assist'
 import { latexExtensions, labelCompletion } from '../lib/latex'
-import { store, registerEditor, updateFile, closeFile, openFile, projectLabels, fileText } from '../store'
+import { store, registerEditor, updateFile, closeFile, openFile, projectLabels, fileText, activeSnippets } from '../store'
 
 const host = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
@@ -56,7 +56,7 @@ function baseExtensions(path: string): Extension {
     rectangularSelection(), crosshairCursor(), history(), indentOnInput(), indentUnit.of('  '),
     highlightSelectionMatches(),
     EditorView.lineWrapping,
-    snippetCompartment.of(snippetSettings.of({ snippets: store.snippets, autofraction: true, tabout: true, matrixShortcuts: true, enabled: store.assist })),
+    snippetCompartment.of(snippetSettings.of({ snippets: activeSnippets(), autofraction: true, tabout: true, matrixShortcuts: true, enabled: store.assist })),
     latexSnippets(),
     mathbookKeymap,
     labelCompletion(projectLabels),
@@ -107,7 +107,7 @@ function reconfigure() {
   view.dispatch({
     effects: [
       assistCompartment.reconfigure(store.assist ? assistExtensions() : []),
-      snippetCompartment.reconfigure(snippetSettings.of({ snippets: store.snippets, autofraction: true, tabout: true, matrixShortcuts: true, enabled: store.assist })),
+      snippetCompartment.reconfigure(snippetSettings.of({ snippets: activeSnippets(), autofraction: true, tabout: true, matrixShortcuts: true, enabled: store.assist })),
     ],
   })
 }
@@ -143,7 +143,7 @@ onBeforeUnmount(() => { registerEditor(null); view?.destroy() })
 
 watch(() => store.activeFile, (p) => showFile(p))
 watch(() => store.project?.id, () => { states.clear(); showFile(store.activeFile) })
-watch(() => [store.assist, store.snippets], () => reconfigure())
+watch(() => [store.assist, store.snippets, store.project?.mode, store.project?.venue], () => reconfigure())
 // external edits to the active file (e.g. rename of an included chapter)
 watch(() => store.activeFile && store.project?.files[store.activeFile], (c) => {
   if (!view || typeof c !== 'string' || c === view.state.doc.toString()) return

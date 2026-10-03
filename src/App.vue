@@ -8,6 +8,7 @@ import HelpPanel from './components/HelpPanel.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
 import ProjectsDialog from './components/ProjectsDialog.vue'
 import DocsPanel from './components/DocsPanel.vue'
+import { venueById } from './lib/venues'
 import { popTargets, popOut, dock, showPanel, setPopupKeyHandler, PANEL_LABELS, type PanelId } from './lib/popout'
 import { store, initSnippets, restoreLast, exportProjectZip, flushSave, markDirty, buildNow, companionReady } from './store'
 
@@ -34,6 +35,7 @@ function onDrag(e: MouseEvent) {
   if (dragging.value === 'left') leftWidth.value = Math.min(Math.max(150, e.clientX), 420)
 }
 
+const venueName = computed(() => venueById(store.project?.venue)?.name ?? 'Paper')
 const saveState = computed(() => store.saving ? 'saving…' : store.dirty ? 'unsaved' : store.savedAt ? 'saved' : '')
 const TABS = Object.keys(PANEL_LABELS) as PanelId[]
 const tabLabel = (id: PanelId) => id === 'docs' ? 'Docs' : PANEL_LABELS[id]
@@ -59,7 +61,8 @@ function renameProject() {
       <span class="save" :class="saveState">{{ saveState }}</span>
       <div class="spacer" />
       <button @click="store.dialog = 'projects'">Projects</button>
-      <button :disabled="!store.project" @click="store.dialog = 'newChapter'">+ Chapter</button>
+      <button v-if="store.project?.mode !== 'paper'" :disabled="!store.project" @click="store.dialog = 'newChapter'">+ Chapter</button>
+      <span v-else class="venue-chip" :title="'Paper mode: ' + (venueName || '')">{{ venueName }}</span>
       <button :disabled="!store.project" @click="exportProjectZip">Export ZIP</button>
       <button class="primary" :disabled="!store.project || !companionReady() || store.compile.building" @click="showPanel('preview'); buildNow()" :title="companionReady() ? 'Compile with the companion (Ctrl/⌘-Enter)' : 'Start the compile companion to build in-app'">
         {{ store.compile.building ? 'Building…' : 'Build PDF' }}
@@ -127,6 +130,8 @@ function renameProject() {
 .brand span { color: var(--accent); font-weight: 500; }
 .project { font-size: 13px; padding: 2px 8px; border-radius: 6px; cursor: default; }
 .project.muted { color: var(--fg-2); }
+/* paper-mode venue badge in the header */
+.venue-chip { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .save { font-size: 11px; color: var(--fg-2); min-width: 60px; }
 .save.unsaved { color: #b45309; }
 .spacer { flex: 1; }

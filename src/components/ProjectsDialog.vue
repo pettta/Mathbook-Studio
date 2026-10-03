@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { VENUES, venueById, type ProjectMode } from '../lib/venues'
 import { store, createProject, openProject, removeProject, importProjectZip, refreshProjects, newChapter } from '../store'
 
 const name = ref('')
 const author = ref('')
+const mode = ref<ProjectMode>('book')
+const venue = ref(VENUES[0].id)
+const selectedVenue = computed(() => venueById(venue.value))
 const chapterTitle = ref('')
 const nameInput = ref<HTMLInputElement | null>(null)
 
 onMounted(() => { void refreshProjects(); setTimeout(() => nameInput.value?.focus(), 30) })
 
 async function doCreate() {
-  await createProject(name.value.trim() || 'Untitled book', author.value.trim())
+  const fallback = mode.value === 'paper' ? 'Untitled paper' : 'Untitled book'
+  await createProject(name.value.trim() || fallback, author.value.trim(), mode.value, mode.value === 'paper' ? venue.value : undefined)
   store.dialog = 'none'
 }
 async function doOpen(id: string) { await openProject(id); store.dialog = 'none' }
@@ -38,10 +43,20 @@ function fmt(t: number) { return new Date(t).toLocaleString() }
       <template v-else>
         <div class="cols">
           <div class="col">
-            <h3>New book</h3>
+            <h3>New project</h3>
+            <div class="seg">
+              <button :class="{ on: mode === 'book' }" @click="mode = 'book'">Book</button>
+              <button :class="{ on: mode === 'paper' }" @click="mode = 'paper'">Paper</button>
+            </div>
             <label>Title <input ref="nameInput" v-model="name" placeholder="A Book of Mathematics" @keydown.enter="doCreate" /></label>
             <label>Author <input v-model="author" placeholder="Your name" @keydown.enter="doCreate" /></label>
-            <p class="muted">Starts from the mathbook class: main.tex, a preface with the cheat-sheet, chapter 1, and a figures folder.</p>
+            <label v-if="mode === 'paper'">Target venue
+              <select v-model="venue">
+                <option v-for="v in VENUES" :key="v.id" :value="v.id">{{ v.name }} — {{ v.field }}</option>
+              </select>
+            </label>
+            <p v-if="mode === 'book'" class="muted">Starts from the mathbook class: main.tex, a preface with the cheat-sheet, chapter 1, and a figures folder.</p>
+            <p v-else class="muted">{{ selectedVenue?.note }} Creates main.tex in the venue's format, refs.bib and a figures folder. Paper shortcuts (;abs, ;tab, ;rw, ;app, ;ci …) replace the book-only ones.</p>
             <div class="btns">
               <button class="primary" @click="doCreate">Create</button>
               <label class="file">Import ZIP…<input type="file" accept=".zip" @change="doImport" /></label>
@@ -77,6 +92,10 @@ label input { font-size: 13px; }
 .muted { color: var(--fg-2); font-size: 12px; line-height: 1.5; }
 .btns { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
 .btns.right { justify-content: flex-end; margin-top: 14px; }
+label select { font-size: 13px; padding: 4px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; margin-bottom: 12px; }
+.seg button { border: none; border-radius: 0; background: var(--bg); padding: 5px 16px; cursor: pointer; color: var(--fg); }
+.seg button.on { background: var(--accent); color: #fff; }
 .file { display: inline-flex; align-items: center; padding: 5px 12px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: var(--bg); color: var(--fg); margin: 0; font-size: 13px; }
 .file input { display: none; }
 .list { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }

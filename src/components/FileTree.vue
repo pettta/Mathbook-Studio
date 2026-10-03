@@ -85,7 +85,7 @@ const emit = defineEmits<{ (e: 'new-chapter'): void }>()
     <div class="tree-head">
       <span class="label">Files</span>
       <span class="actions">
-        <button title="New chapter" @click="emit('new-chapter')">+ chapter</button>
+        <button v-if="store.project?.mode !== 'paper'" title="New chapter" @click="emit('new-chapter')">+ chapter</button>
         <button title="New file" @click="doNewFile">+ file</button>
       </span>
     </div>

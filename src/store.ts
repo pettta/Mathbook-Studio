@@ -6,6 +6,7 @@ import {
 } from './lib/project'
 import { DEFAULT_SNIPPETS } from './lib/snippets/defaults'
 import type { Snippet } from './lib/snippets/types'
+import { type ProjectMode, snippetsFor } from './lib/venues'
 import { scanLabels } from './lib/latex'
 import { showPanel } from './lib/popout'
 import { checkHealth, buildProject, fetchPdf, synctexForward, DEFAULT_COMPANION_URL, type BuildError, type Health } from './lib/compile'
@@ -149,8 +150,13 @@ export function setProject(p: Project) {
   if (store.compile.auto && companionReady()) scheduleBuild(300)
 }
 
-export async function createProject(name: string, author: string) {
-  const p = newProject(name || 'Untitled book', author)
+/** Snippets in effect for the open project (book vs. paper/venue shortcuts). */
+export function activeSnippets(): Snippet[] {
+  return snippetsFor(store.snippets, store.project?.mode, store.project?.venue)
+}
+
+export async function createProject(name: string, author: string, mode: ProjectMode = 'book', venue?: string) {
+  const p = newProject(name || (mode === 'paper' ? 'Untitled paper' : 'Untitled book'), author, mode, venue)
   await saveProject(p)
   setProject(p)
   toast(`Created “${p.name}”`)

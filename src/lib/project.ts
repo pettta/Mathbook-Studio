@@ -10,6 +10,7 @@ import clsSrc from '../template/mathbook.cls?raw'
 import mainSrc from '../template/main.tex?raw'
 import prefaceSrc from '../template/frontmatter/preface.tex?raw'
 import ch01Src from '../template/chapters/ch01.tex?raw'
+import { type ProjectMode, venueById, SAMPLE_BIB } from './venues'
 
 export type FileContent = string | Uint8Array
 
@@ -17,6 +18,8 @@ export interface ProjectMeta {
   id: string
   name: string
   author: string
+  mode?: ProjectMode     // undefined = book (older projects)
+  venue?: string         // paper mode: venue id from venues.ts
   createdAt: number
   updatedAt: number
 }
@@ -80,14 +83,37 @@ Opening paragraph of chapter ${n}.
 \\end{exercises}
 `
 
-export function newProject(name: string, author: string): Project {
+export function newProject(name: string, author: string, mode: ProjectMode = 'book', venueId?: string): Project {
   const now = Date.now()
+  const venue = venueById(venueId)
+  if (mode === 'paper' && venue) {
+    return {
+      id: uid(), name, author, mode, venue: venue.id, createdAt: now, updatedAt: now,
+      files: {
+        'main.tex': venue.main(name, author || 'Author'),
+        'refs.bib': SAMPLE_BIB,
+        'figures/.keep': '',
+        'README.md': `# ${name}
+
+Target venue: **${venue.name}**.
+
+${venue.note}
+
+Build with:
+
+    latexmk -pdf main.tex
+
+Created with Mathbook Studio.
+`,
+      },
+    }
+  }
   const main = mainSrc
     .replace('A Book of Mathematics', name)
     .replace(/Tommy Pett/g, author || 'Author')
     .replace('\\include{chapters/ch02}\n\\include{chapters/ch03}\n', '')
   return {
-    id: uid(), name, author, createdAt: now, updatedAt: now,
+    id: uid(), name, author, mode: 'book', createdAt: now, updatedAt: now,
     files: {
       'main.tex': main,
       'mathbook.cls': clsSrc,
@@ -137,7 +163,7 @@ export async function saveProject(p: Project): Promise<void> {
   const plain: Project = { ...p, files: { ...p.files } }
   await set(KEY(p.id), plain)
   const list = (await get<ProjectMeta[]>(LIST)) ?? []
-  const meta: ProjectMeta = { id: p.id, name: p.name, author: p.author, createdAt: p.createdAt, updatedAt: p.updatedAt }
+  const meta: ProjectMeta = { id: p.id, name: p.name, author: p.author, mode: p.mode, venue: p.venue, createdAt: p.createdAt, updatedAt: p.updatedAt }
   const idx = list.findIndex((m) => m.id === p.id)
   if (idx >= 0) list[idx] = meta; else list.push(meta)
   await set(LIST, list)
@@ -164,7 +190,7 @@ export async function exportZip(p: Project): Promise<Blob> {
     if (path.endsWith('/.keep')) { root.folder(path.slice(0, -6)); continue }
     root.file(path, content as string | Uint8Array)
   }
-  root.file('.mathbook-studio.json', JSON.stringify({ name: p.name, author: p.author, id: p.id, exported: new Date().toISOString() }, null, 2))
+  root.file('.mathbook-studio.json', JSON.stringify({ name: p.name, author: p.author, mode: p.mode, venue: p.venue, id: p.id, exported: new Date().toISOString() }, null, 2))
   return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
 }
 
@@ -177,7 +203,7 @@ export async function importZip(file: File): Promise<Project> {
   const firstSeg = paths.map((p) => p.split('/')[0])
   if (paths.every((p) => p.includes('/')) && new Set(firstSeg).size === 1) prefix = firstSeg[0] + '/'
   const files: Record<string, FileContent> = {}
-  let meta: { name?: string; author?: string } = {}
+  let meta: { name?: string; author?: string; mode?: ProjectMode; venue?: string } = {}
   for (const e of entries) {
     const rel = e.name.slice(prefix.length)
     if (!rel || rel.startsWith('__MACOSX') || rel.endsWith('.DS_Store')) continue
@@ -188,7 +214,7 @@ export async function importZip(file: File): Promise<Project> {
   // make sure every folder that has files also has a .keep? not needed.
   const now = Date.now()
   const name = meta.name || file.name.replace(/\.zip$/i, '')
-  return { id: uid(), name, author: meta.author || '', createdAt: now, updatedAt: now, files }
+  return { id: uid(), name, author: meta.author || '', mode: meta.mode, venue: meta.venue, createdAt: now, updatedAt: now, files }
 }
 
 // ---------------------------------------------------------------------------

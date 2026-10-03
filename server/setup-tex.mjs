@@ -61,6 +61,15 @@ const REQUIRED = [
   ['caption', 'caption.sty'], ['newfloat', 'newfloat.sty'], ['wrapfig', 'wrapfig.sty'],
   ['algorithmicx', 'algpseudocode.sty'], ['xspace', 'xspace.sty'], ['graphics', 'graphicx.sty'],
   ['lm', 'lmodern.sty'], ['l3packages', 'xparse.sty'],
+  // paper mode (venue templates in src/lib/venues.ts).  imsart is not in TeX Live
+  // (IMS distributes it themselves); the aos template falls back without it.
+  ['natbib', 'natbib.sty'], ['booktabs', 'booktabs.sty'], ['setspace', 'setspace.sty'],
+  ['lineno', 'lineno.sty'], ['units', 'nicefrac.sty'], ['upquote', 'upquote.sty'], ['times', 'ptmr8t.tfm'], ['courier', 'pcrr8t.tfm'], ['helvetic', 'phvr8t.tfm'],
+  ['acmart', 'acmart.cls'], ['totpages', 'totpages.sty'], ['environ', 'environ.sty'],
+  ['trimspaces', 'trimspaces.sty'], ['ncctools', 'manyfoot.sty'], ['comment', 'comment.sty'],
+  ['hyperxmp', 'hyperxmp.sty'], ['ifmtarg', 'ifmtarg.sty'], ['libertine', 'libertine.sty'],
+  ['inconsolata', 'zi4.sty'], ['newtx', 'newtxmath.sty'], ['fontaxes', 'fontaxes.sty'],
+  ['xstring', 'xstring.sty'], ['draftwatermark', 'draftwatermark.sty'], ['preprint', 'balance.sty'],
 ]
 
 // ---------------------------------------------------------------------------
